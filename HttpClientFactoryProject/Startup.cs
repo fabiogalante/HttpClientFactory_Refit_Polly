@@ -1,15 +1,14 @@
-﻿using HttpClientFactoryProject.Configuration;
-using HttpClientFactoryProject.Controllers;
-using HttpClientFactoryProject.Services;
+﻿using HttpClientFactoryProject.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
+using Refit;
 using System;
+using HttpClientFactoryProject.Configuration;
 
 namespace HttpClientFactoryProject
 {
@@ -27,25 +26,25 @@ namespace HttpClientFactoryProject
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
-            services.Configure<ApiConfig>(Configuration.GetSection(nameof(ApiConfig)));
+            //services.Configure<ApiConfig>(Configuration.GetSection(nameof(ApiConfig)));
 
             //Singleton
-            services.AddSingleton<IApiConfig>(x => x.GetRequiredService<IOptions<ApiConfig>>().Value);
+           // services.AddSingleton<IApiConfig>(x => x.GetRequiredService<IOptions<ApiConfig>>().Value);
 
 
 
             //Criar uma politica de retry (tente 3x, com timeout de 3 segundos)
             var retryPolicy = HttpPolicyExtensions.HandleTransientHttpError()
                  .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(retryAttempt));
-                //.WaitAndRetryAsync(new[]
-                //{
-                //    TimeSpan.FromSeconds(1),
-                //    TimeSpan.FromSeconds(2),
-                //    TimeSpan.FromSeconds(4),
-                //    TimeSpan.FromSeconds(8),
-                //    TimeSpan.FromSeconds(15),
-                //    TimeSpan.FromSeconds(30)
-                //});
+            //.WaitAndRetryAsync(new[]
+            //{
+            //    TimeSpan.FromSeconds(1),
+            //    TimeSpan.FromSeconds(2),
+            //    TimeSpan.FromSeconds(4),
+            //    TimeSpan.FromSeconds(8),
+            //    TimeSpan.FromSeconds(15),
+            //    TimeSpan.FromSeconds(30)
+            //});
 
 
             // https://github.com/App-vNext/Polly
@@ -53,8 +52,15 @@ namespace HttpClientFactoryProject
 
 
             //Registrar httpclient
-            services.AddHttpClient<IClienteService, ClienteService>(b =>
-                b.BaseAddress = new Uri(Configuration["ApiConfig:BaseUrl"]))
+            //services.AddHttpClient<IClienteService, ClienteService>(b =>
+            //    b.BaseAddress = new Uri(Configuration["ApiConfig:BaseUrl"]))
+            //    .AddPolicyHandler(retryPolicy);
+
+            services.AddRefitClient<IClienteService>()
+                .ConfigureHttpClient(client =>
+                {
+                    client.BaseAddress = new Uri(Configuration["ApiConfig:BaseUrl"]);
+                })
                 .AddPolicyHandler(retryPolicy);
         }
 

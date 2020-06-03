@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using HttpClientFactoryProject.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HttpClientFactoryProject.Controllers
@@ -22,7 +23,23 @@ namespace HttpClientFactoryProject.Controllers
         [HttpGet("ObterCliente/{clientId}")]
         public async Task<ActionResult> ObterCliente(int clientId)
         {
-            return Ok(await _clienteService.ObterCliente(clientId));
+            try
+            {
+                return Ok(await _clienteService.ObterCliente(clientId));
+            }
+            catch (Refit.ApiException exc)
+            {
+               
+            }
+            catch (Exception exc)
+            {
+                
+            }
+
+
+            return BadRequest();
+
+
         }
     }
 }
