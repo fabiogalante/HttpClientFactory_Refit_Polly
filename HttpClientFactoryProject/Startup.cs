@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Extensions.Http;
 using System;
 
 namespace HttpClientFactoryProject
@@ -31,10 +33,29 @@ namespace HttpClientFactoryProject
             services.AddSingleton<IApiConfig>(x => x.GetRequiredService<IOptions<ApiConfig>>().Value);
 
 
-                //Registrar httpclient
-                services.AddHttpClient<IClienteService, ClienteService>(b => b.BaseAddress = new Uri(Configuration["ApiConfig:BaseUrl"]));
+
+            //Criar uma politica de retry (tente 3x, com timeout de 3 segundos)
+            var retryPolicy = HttpPolicyExtensions.HandleTransientHttpError()
+                 .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(retryAttempt));
+                //.WaitAndRetryAsync(new[]
+                //{
+                //    TimeSpan.FromSeconds(1),
+                //    TimeSpan.FromSeconds(2),
+                //    TimeSpan.FromSeconds(4),
+                //    TimeSpan.FromSeconds(8),
+                //    TimeSpan.FromSeconds(15),
+                //    TimeSpan.FromSeconds(30)
+                //});
 
 
+            // https://github.com/App-vNext/Polly
+            // https://github.com/App-vNext/Polly/wiki/Retry
+
+
+            //Registrar httpclient
+            services.AddHttpClient<IClienteService, ClienteService>(b =>
+                b.BaseAddress = new Uri(Configuration["ApiConfig:BaseUrl"]))
+                .AddPolicyHandler(retryPolicy);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
